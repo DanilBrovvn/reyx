@@ -1,98 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { clsx } from 'clsx';
-import ProjectModal from '../components/ProjectModal';
-import { supabase } from '../lib/supabase';
+import React from 'react';
+import PortfolioView from '../components/PortfolioView';
 
-const categories = [
-  { id: 'all', label: 'Все' },
-  { id: '3d', label: '3D и Анимации' },
-  { id: 'branding', label: 'Брендирование' },
-  { id: 'packaging', label: 'Упаковка' }
+// Пример данных для портфолио
+const projects = [
+  {
+    id: '1',
+    title: 'Проект 1',
+    description: 'Описание проекта 1. Это может быть длинное описание, которое будет обрезано в карточке, но полностью отображаться в модальном окне.',
+    image_url: 'https://picsum.photos/800/600?random=1',
+    category: 'Веб-разработка',
+    created_at: '2024-03-07'
+  },
+  {
+    id: '2',
+    title: 'Проект 2',
+    description: 'Описание проекта 2. Здесь может быть подробное описание проекта, его целей и достигнутых результатов.',
+    image_url: 'https://picsum.photos/800/600?random=2',
+    category: 'Мобильная разработка',
+    created_at: '2024-03-06'
+  },
+  {
+    id: '3',
+    title: 'Проект 3',
+    description: 'Описание проекта 3. В этом проекте мы использовали современные технологии и достигли отличных результатов.',
+    image_url: 'https://picsum.photos/800/600?random=3',
+    category: 'UI/UX дизайн',
+    created_at: '2024-03-05'
+  },
+  {
+    id: '4',
+    title: 'Проект 4',
+    description: 'Описание проекта 4. Это может быть описание сложного проекта с множеством функций и особенностей.',
+    image_url: 'https://picsum.photos/800/600?random=4',
+    category: 'Веб-разработка',
+    created_at: '2024-03-04'
+  },
+  {
+    id: '5',
+    title: 'Проект 5',
+    description: 'Описание проекта 5. В этом проекте мы создали инновационное решение для сложной задачи.',
+    image_url: 'https://picsum.photos/800/600?random=5',
+    category: 'Мобильная разработка',
+    created_at: '2024-03-03'
+  },
+  {
+    id: '6',
+    title: 'Проект 6',
+    description: 'Описание проекта 6. Это может быть описание проекта, в котором мы использовали передовые технологии.',
+    image_url: 'https://picsum.photos/800/600?random=6',
+    category: 'UI/UX дизайн',
+    created_at: '2024-03-02'
+  }
 ];
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string;
-  category: string;
-  created_at: string;
-}
-
-const Portfolio = () => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      setError('Ошибка при загрузке проектов');
-    } else {
-      setProjects(data || []);
-    }
-  };
-
-  const filteredProjects = projects.filter(
-    project => selectedCategory === 'all' || project.category === selectedCategory
-  );
-
+const Portfolio: React.FC = () => {
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      <div className="flex justify-center gap-8 mb-12">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            className={clsx(
-              'text-lg transition-colors',
-              selectedCategory === category.id
-                ? 'text-black font-medium'
-                : 'text-gray-500 hover:text-black'
-            )}
-          >
-            {category.label}
-          </button>
-        ))}
-      </div>
-
-      {error && (
-        <div className="mb-8 p-3 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredProjects.map((project) => (
-          <div
-            key={project.id}
-            className="aspect-square overflow-hidden cursor-pointer group"
-            onClick={() => setSelectedProject(project)}
-          >
-            <img
-              src={project.image_url}
-              alt={project.title}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
-            />
-          </div>
-        ))}
-      </div>
-
-      {selectedProject && (
-        <ProjectModal
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-        />
-      )}
+    <div className="min-h-screen bg-gray-50 py-8">
+      <PortfolioView projects={projects} />
     </div>
   );
 };
