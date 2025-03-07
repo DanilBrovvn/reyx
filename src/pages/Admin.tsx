@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ProjectForm from '../components/ProjectForm';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import LoginForm from '../components/LoginForm';
+import { Plus, Edit, Trash2, LogOut } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -18,10 +19,19 @@ const Admin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    checkAuth();
+    if (isAuthenticated) {
+      loadProjects();
+    }
+  }, [isAuthenticated]);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsAuthenticated(!!session);
+  };
 
   const loadProjects = async () => {
     try {
@@ -63,6 +73,32 @@ const Admin: React.FC = () => {
     loadProjects();
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setIsAuthenticated(false);
+    } catch (err) {
+      console.error('Error signing out:', err);
+      setError('Ошибка при выходе');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Вход в админ-панель
+            </h2>
+          </div>
+          <LoginForm onSuccess={() => setIsAuthenticated(true)} />
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -75,13 +111,22 @@ const Admin: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Управление проектами</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
-        >
-          <Plus size={20} />
-          Новый проект
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+          >
+            <Plus size={20} />
+            Новый проект
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            <LogOut size={20} />
+            Выйти
+          </button>
+        </div>
       </div>
 
       {error && (
