@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import ProjectForm from '../components/ProjectForm';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -13,244 +12,139 @@ interface Project {
   created_at: string;
 }
 
-const Admin = () => {
-  const { user, signIn, signOut } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('all');
-  const [imageUrl, setImageUrl] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+const Admin: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    if (user) {
-      loadProjects();
-    }
-  }, [user]);
+    loadProjects();
+  }, []);
 
   const loadProjects = async () => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      setError('Ошибка при загрузке проектов');
-    } else {
-      setProjects(data || []);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
     try {
-      await signIn(email, password);
-    } catch (error) {
-      setError('Неверный email или пароль');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.from('projects').insert([
-        {
-          title,
-          description,
-          image_url: imageUrl,
-          category,
-          user_id: user?.id,
-        },
-      ]);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setImageUrl('');
-      setCategory('all');
-
-      // Reload projects
-      await loadProjects();
-    } catch (error) {
-      setError('Ошибка при сохранении проекта');
+      setProjects(data || []);
+    } catch (err) {
+      console.error('Error loading projects:', err);
+      setError('Ошибка при загрузке проектов');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот проект?')) return;
 
-    setIsLoading(true);
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', id);
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
-      await loadProjects();
-    } catch (error) {
+      loadProjects();
+    } catch (err) {
+      console.error('Error deleting project:', err);
       setError('Ошибка при удалении проекта');
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  if (!user) {
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setEditingProject(null);
+    loadProjects();
+  };
+
+  if (loading) {
     return (
-      <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-6">Вход в админ панель</h2>
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSignIn}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">Пароль</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-black text-white py-2 rounded hover:bg-gray-800 disabled:bg-gray-400 flex items-center justify-center"
-          >
-            {isLoading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              'Войти'
-            )}
-          </button>
-        </form>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Загрузка...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto mt-12 p-6">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">Управление портфолио</h2>
+        <h1 className="text-3xl font-bold">Управление проектами</h1>
         <button
-          onClick={() => signOut()}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
         >
-          Выйти
+          <Plus size={20} />
+          Новый проект
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-3 bg-red-100 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-xl font-semibold mb-4">Добавить новую работу</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Название</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              {editingProject ? 'Редактирование проекта' : 'Новый проект'}
+            </h2>
+            <ProjectForm
+              project={editingProject || undefined}
+              onSuccess={handleFormSuccess}
+              onCancel={() => {
+                setShowForm(false);
+                setEditingProject(null);
+              }}
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Описание</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-2 border rounded h-32"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Категория</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
-            >
-              <option value="all">Все</option>
-              <option value="3d">3D и Анимации</option>
-              <option value="branding">Брендирование</option>
-              <option value="packaging">Упаковка</option>
-            </select>
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">URL изображения</label>
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-black text-white py-2 rounded hover:bg-gray-800 disabled:bg-gray-400 flex items-center justify-center"
-          >
-            {isLoading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              'Добавить работу'
-            )}
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-semibold mb-4">Существующие работы</h3>
-        <div className="space-y-4">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className="flex items-center justify-between p-4 border rounded"
-            >
-              <div>
-                <h4 className="font-medium">{project.title}</h4>
-                <p className="text-sm text-gray-500">{project.category}</p>
-              </div>
-              <button
-                onClick={() => handleDelete(project.id)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <Trash2 size={20} />
-              </button>
-            </div>
-          ))}
         </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects.map((project) => (
+          <div
+            key={project.id}
+            className="bg-white rounded-lg shadow-lg overflow-hidden"
+          >
+            <div className="aspect-video relative">
+              <img
+                src={project.image_url}
+                alt={project.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-2 right-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingProject(project);
+                    setShowForm(true);
+                  }}
+                  className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(project.id)}
+                  className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
+                >
+                  <Trash2 size={16} className="text-red-500" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4">
+              <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
+              <p className="text-gray-600 line-clamp-2">{project.description}</p>
+              <div className="mt-2 text-sm text-gray-500">{project.category}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
